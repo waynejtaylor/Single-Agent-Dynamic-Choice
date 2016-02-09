@@ -24,6 +24,9 @@ file to get a base understanding of the model before proceeding to the hierarchi
 2) "Estimate Bayesian Hierarchical DDC.R" follows a method similar to Imai, Jain, and Ching (2009)
 for estimation. See the code for options on variations of the estimation procedure.
 
+3) "Estimate Bayesian Hierarchical DDC cpp.R" is similar to #2 but uses c++ for speed improvements.
+The main c++ program is in "bddcMCMCloop.cpp"
+
 IMPORTANT: this is a stylized example meant to highlight the mechanics of the process. Care must be
 taken when selecting the priors and scaling parameters. Here convergence is achieved, but only because
 of how I set up the problem.
