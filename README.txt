@@ -15,10 +15,15 @@ Second Group: Arcidiacono and Miller (2011)------------------------------------
    -xgrid.R,wlogitd.R,wlogit.R,likebusML4.R,genbus4.cpp,fvdataBOTH.cpp,intcond.R,intcondP.R
 
 Third Group: Bayesian DDC (2009)------------------------------------------------
-*) "BayesianDDCEstimateDataRustvEmax.R" uses the output from "Rust Data Generating Process.R” to replicate the Imai, Jain, and Ching (2009) method, but does not allow for random effects. Use this file to get a base understanding of the model before proceeding to the hierarchical version.
+*) "BayesianDDCEstimateDataRustvEmax.R" uses the output from "Rust Data Generating Process.R” to
+replicate the Imai, Jain, and Ching (2009) method, but does not allow for random effects. Use this
+file to get a base understanding of the model before proceeding to the hierarchical version.
 
 1) "Rust DGP with Hierarchical RE.R" generates Rust data with a hierarchical mixing
 
-2) "Estimate Bayesian Hierarchical DDC.R" follows a method similar to Imai, Jain, and Ching (2009) for estimation. See the code for options on variations of the estimation procedure.
+2) "Estimate Bayesian Hierarchical DDC.R" follows a method similar to Imai, Jain, and Ching (2009)
+for estimation. See the code for options on variations of the estimation procedure.
 
-IMPORTANT: this is a stylized example meant to highlight the mechanics of the process. Care must be taken when selecting the priors and scaling parameters. Here convergence is achieved, but only because of how I set up the problem.
+IMPORTANT: this is a stylized example meant to highlight the mechanics of the process. Care must be
+taken when selecting the priors and scaling parameters. Here convergence is achieved, but only because
+of how I set up the problem.
