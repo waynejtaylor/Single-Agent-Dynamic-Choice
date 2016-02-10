@@ -192,13 +192,13 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
       //--------------------------------------------------------------
       
       futil_maint = vectorise(ST_mat*emax(span::all,i));
-      futil_repl = vectorise(R_mat*emax(span::all,i));
+      futil_repl  = vectorise(R_mat*emax(span::all,i));
       
       futil_maint_state.set_size(nobs);
       futil_repl_state.set_size(nobs);
       for(int n = 0;n<nobs;n++){
-        futil_maint_state[n] = futil_maint[state[n]];
-        futil_repl_state[n] = futil_repl[state[n]];
+        futil_maint_state[n] = futil_maint[state[n]-1];
+        futil_repl_state[n] = futil_repl[state[n]-1];
       }
       //--------------------------------------------------------------
       // Construct the likelihood
@@ -248,14 +248,14 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
     }
 
     //Draw B-bar and V as a multivariate regression
-    multiregout=rmultireg_rcpp(oldthetas,Z,Deltabar,ADelta,nu,V);
-    oldDelta=as<mat>(multiregout["B"]);
-    oldVtheta=as<mat>(multiregout["Sigma"]);
-    oldVthetai=solve(trimatu(chol(oldVtheta)),eye(nvar,nvar));
+    multiregout = rmultireg_rcpp(oldthetas,Z,Deltabar,ADelta,nu,V);
+    oldDelta    = as<mat>(multiregout["B"]);
+    oldVtheta   = as<mat>(multiregout["Sigma"]);
+    oldVthetai  = solve(trimatu(chol(oldVtheta)),eye(nvar,nvar));
     
-    Deltadraw(r,span::all) = trans(vectorise(oldDelta));
+    Deltadraw(r,span::all)  = trans(vectorise(oldDelta));
     Vthetadraw(r,span::all) = trans(vectorise(oldVtheta));
-    thetadraw.slice(r) = oldthetas;
+    thetadraw.slice(r)      = oldthetas;
     llike[r]=logl;
     reject[r]=rej/nlgt;
     
