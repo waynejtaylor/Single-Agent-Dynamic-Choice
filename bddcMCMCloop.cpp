@@ -168,12 +168,13 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
     
     rej = 0;
     logl = 0;  
+    sV = stheta*oldVtheta;
+    root = trans(chol(sV));
     if(fastConv){
       oldVtheta  = trans(chol(Vtheta));
       oldVthetai = solve(trimatu(chol(Vtheta)),eye(nvar,nvar));
+      root = chol(Vtheta);
     }
-    sV = stheta*oldVtheta;
-    root = trans(chol(sV));
     
     //Draw B_i|B-bar, V
     for(int i = 0;i<nlgt;i++){
@@ -232,6 +233,11 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
       //heterogeneity
       logknew = as_scalar(-.5*(thetan.t()-Z(i,span::all)*oldDelta) * oldVthetai * (thetan-(Z(i,span::all)*oldDelta).t()));
       logkold = as_scalar(-.5*(thetao.t()-Z(i,span::all)*oldDelta) * oldVthetai * (thetao-(Z(i,span::all)*oldDelta).t()));
+      //oldDelta       = nz x nvar
+      //Z(i,span::all) = 1 x nz
+      //oldVthetai     = nvar x nvar
+      //thetan/o       = nvar x 1
+      //result is 1xnvar x nvarxnvar x nvarx1 = 1x1
       
       // M-H step
       alpha = exp(pnew + logknew - pold - logkold);
@@ -379,7 +385,8 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
     Named("Vthetadraw") = Vthetadraw,
     Named("thetadraw")  = thetadraw,
     Named("llike")      = llike, 
-    Named("reject")     = reject
+    Named("reject")     = reject,
+    Named("emax")       = emax
   ));
   
 }
