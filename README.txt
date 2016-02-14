@@ -19,12 +19,12 @@ Third Group: Bayesian DDC (2009)------------------------------------------------
 replicate the Imai, Jain, and Ching (2009) method, but does not allow for random effects. Use this
 file to get a base understanding of the model before proceeding to the hierarchical version.
 
-1) "Rust DGP with Hierarchical RE.R" generates Rust data with a hierarchical mixing
+1) "RustDGPwithHierarchicalRE.R" generates Rust data with a hierarchical mixing
 
-2) "Estimate Bayesian Hierarchical DDC.R" follows a method similar to Imai, Jain, and Ching (2009)
+2) "EstimateBayesianHierarchicalDDC.R" follows a method similar to Imai, Jain, and Ching (2009)
 for estimation. See the code for options on variations of the estimation procedure.
 
-3) "Estimate Bayesian Hierarchical DDC cpp.R" is similar to #2 but uses c++ for speed improvements.
+3) "EstimateBayesianHierarchicalDDC cpp.R" is similar to #2 but uses c++ for speed improvements.
 The main c++ program is in "bddcMCMCloop.cpp"
 
 IMPORTANT: this is a stylized example meant to highlight the mechanics of the process. Care must be

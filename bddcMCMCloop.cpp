@@ -120,6 +120,8 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
                   double scale, mat const& thetas, mat const& Vtheta,
                   int NsAll, int LAll, vec const& hkerns){
     
+  //Wayne Taylor 2/14/2016  
+    
   int S = States.size();
   int nlgt = lgtdata.size();
   int nvar = V.n_cols;
@@ -151,15 +153,26 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
   vec theta1_p,theta2_p,rkern11,rkern22,kernMulti;
   uvec allRowsState(S),indKerni,indTheta,indThetai;
   mat valuei;
-  cube value = zeros<cube>(S,nlgt,NsAll);  //Keep the updated emax values from the last Ns MCMC draws (used for kernel weighting)
+  cube value         = zeros<cube>(S,nlgt,NsAll);    //Keep the updated emax values from the last Ns MCMC draws (used for kernel weighting)
+  cube thetadrawprop = zeros<cube>(nlgt,nvar,NsAll); //For kernel weights, we always use the PROPOSED thetas since the accepted thetas are often repeated
   
   vec kern = zeros<vec>(NsAll);
   for(int i = 0; i < S; i++) allRowsState[i] = i;
   
   //for shocks
+  //NOTE: IN THE RUST EXAMPLE, SINCE WE ASSUME GEV ERRORS THERE IS NO NEED TO AVERAGE OVER SHOCKS
+  //THIS IS SIMPLY FOR ILLUSTRATIVE PURPOSES
   mat sh     = zeros<mat>(nsim1,2);
   int nhalf = .5*nsim1;
   mat val;
+  
+  if(shocks){
+      val.set_size(nsim1,2);
+      sh.set_size(nsim1,2);
+  } else {
+      val.set_size(S,2);
+  }
+  
   
   //START OF GIBBS SAMPLER #######################################################################################################
   for(int r = 0; r<R; r++){
@@ -176,6 +189,13 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
       root = chol(Vtheta);
     }
     
+    //We push back the old proposed thetas to make room for the new ones
+    //Note: thetadrawprop(,,0) contains the most recent thetas proposed, thetadrawprop(,,1) contains the thetas proposed from 2 times ago
+    if(kernelavg){
+      for(int v = 1;v<NsAll;v++) thetadrawprop.slice(v) = thetadrawprop.slice(v-1); //push back the old values
+      thetadrawprop.slice(0).zeros();                                               //fill up the first spot with zeros
+    }
+    
     //Draw B_i|B-bar, V
     for(int i = 0;i<nlgt;i++){
       lgtdatai = lgtdata[i];
@@ -188,6 +208,12 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
       thetao = vectorise(oldthetas(i,span::all));
       thetan = thetao + root*as<vec>(rnorm(nvar));
       
+      //save the proposed thetas for kernel estimation
+      //if using a non-contiguous index, it would be i and i+nlgt
+      if(kernelavg){
+        thetadrawprop(i,0,0) = thetan[0];
+        thetadrawprop(i,1,0) = thetan[1];
+      }
       //--------------------------------------------------------------
       // Derive expected values
       //--------------------------------------------------------------
@@ -268,12 +294,6 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
     //================================================================
     // This part derives the Emax functions using the simulated data.
     //================================================================
-    if(shocks){
-      val.set_size(nsim1,2);
-      sh.set_size(nsim1,2);
-    } else {
-      val.set_size(S,2);
-    }
                          
     //Loop through each person
     for(int i = 0;i<nlgt;i++){
@@ -325,9 +345,9 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
       Ns = std::min(NsAll,r); //this is the most we can check back over, which might be less than NsAll
       L  = std::min(LAll,r);  //this is the most we can average back over, which might be less than LAll
       
-      //These are the indices we will check over      
+      //These are the indices we will check over (elements 0...Ns-1) 
       indTheta.set_size(Ns);
-      for(int n = 0;n<Ns;n++) indTheta[n] = r-n-1;
+      for(int n = 0;n<Ns;n++) indTheta[n] = n;
        
       //----------------------------------
       // Derive the Gaussian Kernel values
@@ -342,9 +362,9 @@ List bddcMCMCloop(int R,int nsim1,vec const& States,List const&  lgtdata,mat con
         
         indThetai = i + (indTheta * (nlgt * nvar));
         
-        //past thetas
-        theta1_p   =  thetadraw(indThetai);
-        theta2_p   =  thetadraw(indThetai + nlgt);
+        //past thetas: note these are PROPOSED thetas (if we include accepted thetas only, a lot of values will be repeated)
+        theta1_p   =  thetadrawprop(indThetai);
+        theta2_p   =  thetadrawprop(indThetai + nlgt);
         
         rkern11 = (1/hkerns[0])*exp(-.5*(pow((theta1_c-theta1_p)/hkerns[0],2)));
         rkern22 = (1/hkerns[1])*exp(-.5*(pow((theta2_c-theta2_p)/hkerns[1],2)));
