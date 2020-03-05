@@ -248,8 +248,8 @@ p
 theta1 = 2.0   #replacement cost
 theta2 = 0.09  #maintenance cost
 # #OR
-# theta1 = 8.0   #replacement cost
-# theta2 = 0.09  #maintenance cost
+theta1 = 8.0   #replacement cost
+theta2 = 0.09  #maintenance cost
 
 #other parameters
 beta   = 0.9   #discount factor (.9 in paper)
@@ -441,12 +441,21 @@ thetahat
 
 #From above, these are the estimated CCP probabilities that will be used for comparisons
 probhat_CCP = hm_prob(thetahat,lin_cost,pchoice,transMat0,transMat1)
+value_CCP   = hm_value(thetahat,lin_cost,pchoicehat,transMat0,transMat1)
+value_CCP   = value_CCP - min(value_CCP) #subtract the smallest value
+summary(beta*transMat1%*%value_CCP)
+summary(beta*transMat0%*%value_CCP)
+head(cbind(beta*transMat0%*%value_CCP,beta*transMat1%*%value_CCP))
 
 #First, construct the conditional value function utility + beta*V as if theta was known
 valueFS       = futureValFS(S,T=50,R=100,beta,p,pchoice,theta)
 valueFS_util1 = -lin_cost(1:S,thetahat,1) + valueFS[,2]    #Current utility plus discounted future utilities given t0 action = replace
 valueFS_util0 = -lin_cost(1:S,thetahat,0) + valueFS[,1]    #Current utility plus discounted future utilities given t0 action = maintain
 probhat_theta = exp(valueFS_util1)/(exp(valueFS_util0) + exp(valueFS_util1))
+
+#Note similarity:
+summary(beta*transMat1%*%value_CCP - beta*transMat0%*%value_CCP)
+summary(valueFS[,2] - valueFS[,1])
 
 #Next, forward simulate the future discounted utilities separating out theta and differening
 valueFS_HMSSFuture      = futureValHMSS(S,T=50,R=100,beta,p,pchoice)
