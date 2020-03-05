@@ -307,8 +307,8 @@ pchoicehat = pchoice
 #given replace = 1 or maintain = 0
 
 #when decision is to replace, we reset each state
-# transMat1 = matrix(c(phat,rep(0,S-length(phat))),S,S,byrow = TRUE)
-transMat1 = cbind(1,matrix(0,S,S-1))
+transMat1 = matrix(c(phat,rep(0,S-length(phat))),S,S,byrow = TRUE)
+#transMat1 = cbind(1,matrix(0,S,S-1))
 
 #when the decision is to maintain, we increment according to phat
 # transMat0 = matrix(0,S,S)
@@ -326,32 +326,47 @@ for(i in 1:S){
   }
 }
 
-
-
 #Using:
 #1) the payoff function (whose parameters we want to learn)
 #2) the transition matrices: transMat1, transMat2
 #3) the initial choice probabilities pchoicehat
 #we can now calculate the bus manager's value function using the following formula:
 
+
 hm_value = function(thetahat,lin_cost,pchoicehat,transMat0,transMat1){
-    
-  pchoicehatMat = matrix(pchoicehat,S,S)
+
+  lambda = matrix(1,1,S)
   
-  denom = diag(S) - beta*(1-pchoicehatMat)*transMat0 - beta*pchoicehatMat*transMat1 
-    
-  # #Original: but note UTILITY is NEGATIVE of COST
-  # numer = (1-pchoicehat)*(lin_cost(1:S,thetahat,0) + gamma_cnst - log(1 - pchoicehat)) +
-  #             pchoicehat*(lin_cost(1:S,thetahat,1) + gamma_cnst - log(pchoicehat))
-    
-  numer = (1-pchoicehat)*(-lin_cost(1:S,thetahat,0) + gamma_cnst - log(1 - pchoicehat)) +
-  pchoicehat*(-lin_cost(1:S,thetahat,1) + gamma_cnst - log(pchoicehat))
+  denom  = diag(S) - beta*((1-pchoicehat)%*%lambda*transMat0 + pchoicehat%*%lambda*transMat1)
+  
+  numer = pchoice*(-lin_cost(1:S,thetahat,1) + gamma_cnst - log(pchoice)) + 
+      (1-pchoice)*(-lin_cost(1:S,thetahat,0) + gamma_cnst - log(1-pchoice))
   
   value = solve(denom) %*% numer
-    
+  
   value
-
 }
+
+
+# #alternative specification (same output)
+# hm_value = function(thetahat,lin_cost,pchoicehat,transMat0,transMat1){
+#     
+#   pchoicehatMat = matrix(pchoicehat,S,S)
+#   
+#   denom = diag(S) - beta*(1-pchoicehatMat)*transMat0 - beta*pchoicehatMat*transMat1 
+#     
+#   # #Original: but note UTILITY is NEGATIVE of COST
+#   # numer = (1-pchoicehat)*(lin_cost(1:S,thetahat,0) + gamma_cnst - log(1 - pchoicehat)) +
+#   #             pchoicehat*(lin_cost(1:S,thetahat,1) + gamma_cnst - log(pchoicehat))
+#     
+#   numer = (1-pchoicehat)*(-lin_cost(1:S,thetahat,0) + gamma_cnst - log(1 - pchoicehat)) +
+#               pchoicehat*(-lin_cost(1:S,thetahat,1) + gamma_cnst - log(pchoicehat))
+#   
+#   value = solve(denom) %*% numer
+#     
+#   value
+# 
+# }
 
 #replacement probabilities
 hm_prob = function(thetahat,lin_cost,pchoicehat,transMat0,transMat1){
@@ -366,18 +381,18 @@ hm_prob = function(thetahat,lin_cost,pchoicehat,transMat0,transMat1){
   delta2 = exp(-lin_cost(1:S,thetahat,0) + beta*transMat0%*%value)
   
   probhat = delta1/(delta1 + delta2)
-  
+
   probhat
 
 }
 
 #Create LL function
-nloglikeobs = function(thetahat) {
+nloglikeobs = function(thetahat,probhat=pchoicehat) {
   
   y = busData$choice
   X = busData$state
   
-  prob = hm_prob(thetahat,lin_cost,pchoicehat,transMat0,transMat1)
+  prob = hm_prob(thetahat,lin_cost,probhat,transMat0,transMat1)
   prob = prob[X]
 
   LL = (1-y)*log(1-prob) + y*log(prob)
@@ -386,89 +401,93 @@ nloglikeobs = function(thetahat) {
  
 }
 
-fit_CCP = optim(c(0,0),nloglikeobs,method = "BFGS")
+
+fit_CCP  = optim(c(0,0),nloglikeobs,method = "BFGS",probhat=pchoicehat)
 fit_CCP$par
 theta
 
+# #other methods (very similar results)
+# bounds = c(1e-6, Inf)
+# fit_CCP  = optim(c(0,0),nloglikeobs,method=c("L-BFGS-B"),lower=bounds[1],upper=bounds[2],probhat=pchoicehat)
+# fit_CCP$par
+# fit_CCP  = optim(c(0,0),nloglikeobs,method=c("Nelder-Mead"),probhat=pchoicehat)
+# fit_CCP$par
+
+fit_CCP$value
+nloglikeobs(theta,pchoice)
+
+#iterate
+K = 5
+thetahat = fit_CCP$par
+probhat  = pchoicehat
+k = 1
+while(k < K) {
+  
+  #restimate choice probabilities
+  probhat  = hm_prob(thetahat,lin_cost,probhat,transMat0,transMat1)
+  
+  #refit CCP
+  ccp = optim(c(0,0),nloglikeobs,method = "BFGS",probhat=probhat)
+
+  #update thetahat
+  thetahat = ccp$par
+  
+  k = k + 1
+    
+}
+thetahat
+
 #HMSS 1994: CCP USING FORWARD SIMULATION ------------------
 
-#Here is a portion of the CCP code from above (for comparison purposes to forward simulation)
-pchoicehatMat = matrix(pchoicehat,S,S)
-denom = diag(S) - beta*(1-pchoicehatMat)*transMat0 - beta*pchoicehatMat*transMat1
-numer = (1-pchoicehat)*(-lin_cost(1:S,thetahat,0) + gamma_cnst - log(1 - pchoicehat)) +
-  pchoicehat*(-lin_cost(1:S,thetahat,1) + gamma_cnst - log(pchoicehat))
-value = solve(denom) %*% numer
-delta1 = exp(-lin_cost(1:S,thetahat,1) + beta*transMat1%*%value)
-delta2 = exp(-lin_cost(1:S,thetahat,0) + beta*transMat0%*%value)
-probhat = delta1/(delta1 + delta2)
+#From above, these are the estimated CCP probabilities that will be used for comparisons
+probhat_CCP = hm_prob(thetahat,lin_cost,pchoice,transMat0,transMat1)
 
-#Simple forward simulation and HMSS approach based on 1994 equations
-outFS_1994   = simpleFS_1994(S,T=50,R=100,beta,phat,pchoicehat,thetahat)
-outDiff_1994 = outFS_1994[,2] - outFS_1994[,1]
-FSphat_1994  = exp(outDiff_1994)/(1 + exp(outDiff_1994))
+#First, construct the conditional value function utility + beta*V as if theta was known
+valueFS       = futureValFS(S,T=50,R=100,beta,p,pchoice,theta)
+valueFS_util1 = -lin_cost(1:S,thetahat,1) + valueFS[,2]    #Current utility plus discounted future utilities given t0 action = replace
+valueFS_util0 = -lin_cost(1:S,thetahat,0) + valueFS[,1]    #Current utility plus discounted future utilities given t0 action = maintain
+probhat_theta = exp(valueFS_util1)/(exp(valueFS_util0) + exp(valueFS_util1))
 
-#we should be able to get outDiff using simpleHMSS %*% theta
-outHMSS_1994     = simpleHMSS_1994(S,T=50,R=100,beta,phat,pchoicehat)
-outDiffHMSS_1994 = outHMSS_1994 %*% c(1,theta)
-HMSSphat_1994    = exp(outDiffHMSS_1994)/(1+exp(outDiffHMSS_1994))
+#Next, forward simulate the future discounted utilities separating out theta and differening
+valueFS_HMSSFuture      = futureValHMSS(S,T=50,R=100,beta,p,pchoice)
+valueFS_HMSSFuture_diff = (-lin_cost(1:S,theta,1) - -lin_cost(1:S,theta,0) + valueFS_HMSSFuture %*% c(1,theta)) 
+probhat_HMSSFuture      = exp(valueFS_HMSSFuture_diff)/(1 + exp(valueFS_HMSSFuture_diff))
 
-#Simple forward simulation and HMSS approach based on intuition
-outFS = simpleFS(S,T=50,R=100,beta,phat,pchoicehat,thetahat)
-#outFS = simpleFSgamma(S,T=50,R=100,beta,phat,pchoicehat,thetahat)
-outDiffFS = outFS[,2] - outFS[,1]
-FSphat  = exp(outDiffFS)/(1 + exp(outDiffFS))
-
-#we should be able to get outDiff using simpleHMSS %*% theta
-outHMSS     = simpleHMSS(S,T=50,R=100,beta,phat,pchoicehat)
-outDiffHMSS = outHMSS %*% c(theta)
-HMSSphat    = exp(outDiffHMSS)/(1+exp(outDiffHMSS))
+#Next, finally reconstruct the function to include t = 0 utility
+valueFS_HMSS      = valHMSS(S,T=50,R=100,beta,p,pchoice)
+valueFS_HMSS_diff = valueFS_HMSS %*% c(1,theta)
+probhat_HMSS      = exp(valueFS_HMSS_diff)/(1 + exp(valueFS_HMSS_diff))
 
 matplot(cbind(
-  round(FSphat,2),    #estimate pchoice|current state
-  round(HMSSphat,2),  #estimate pchoice|current state
-  round(FSphat_1994,2),  
-  round(HMSSphat_1994,2),
-  round(pchoice,2),    #actual pchoice|state
-  round(probhat,2)))   #estimated from CPP
+  pchoice,             #Actual pchoice|state
+  probhat_CCP,         #From CCP estimates
+  probhat_theta,       #From forward simulation if theta is known
+  probhat_HMSSFuture,  #From forward simulation separating out theta
+  probhat_HMSS))       #Reconstruct function to include t = 0
 
-#Use outHMSS to predict theta
+#Use valueFS_HMSS to predict theta
 
 #Unweighted:
-y = log(pchoice/(1-pchoice))
-X = outHMSS
+y = log(pchoice/(1-pchoice)) - valueFS_HMSS[,1]
+X = valueFS_HMSS[,-1]
 solve(crossprod(X))%*%crossprod(X,y)
 fit_CCP$par #CCP estimate
-theta   #truth
+theta       #truth
 
 #Weighted:
-y = log(pchoice/(1-pchoice))
-X = outHMSS
+y = log(pchoice/(1-pchoice)) - valueFS_HMSS[,1]
+X = valueFS_HMSS[,-1]
 stateCount = aggregate(id~state,busData,FUN=length)
 Wdiag = rep(0,S)
 Wdiag[stateCount$state] = stateCount$id 
 W = diag(Wdiag)
 solve(t(X)%*%W%*%X)%*%(t(X)%*%W%*%y)
 fit_CCP$par #CCP estimate
-theta   #truth
+theta       #truth
 
 #Same as weighted:
-y = log(pchoice[busData$state]/(1-pchoice[busData$state]))
-X = outHMSS[busData$state,]
-solve(crossprod(X))%*%crossprod(X,y)
-
-#Approach from 1994 paper using weighting matrix
-y = log(pchoice/(1-pchoice)) - outHMSS_1994[,1]
-X = outHMSS_1994[,-1]
-solve(t(X)%*%W%*%X)%*%(t(X)%*%W%*%y)
-
-#Same as weighted:
-y = log(pchoice[busData$state]/(1-pchoice[busData$state])) - outHMSS_1994[busData$state,1]
-X = outHMSS_1994[busData$state,-1]
-solve(crossprod(X))%*%crossprod(X,y)
-
-#Unweighted:
-y = log(pchoice/(1-pchoice)) - outHMSS_1994[,1]
-X = outHMSS_1994[,-1]
+y = log(pchoice[busData$state]/(1-pchoice[busData$state])) - valueFS_HMSS[busData$state,1]
+X = valueFS_HMSS[busData$state,-1]
 solve(crossprod(X))%*%crossprod(X,y)
 
 #HMSS 1994: Estimate p(choice|state) and transition probabilities ---------------------
@@ -508,13 +527,6 @@ pchoicehat_rf[pchoicehat_prep$state] = pchoicehat_prep$pchoicehat
 pchoicehat_rf[pchoicehat_rf == 0] = 1e-5
 pchoicehat_rf[pchoicehat_rf == 1] = 1 - 1e-5
 
-
-outHMSS = simpleHMSS(S,T=50,R=200,beta,phat,pchoicehat)
-y = log(pchoicehat[busData$state]/(1-pchoicehat[busData$state]))
-X = outHMSS[busData$state,]
-solve(crossprod(X))%*%crossprod(X,y)
-fit_CCP$par
-
 #VARIATIONS TO ESTIMATE PCHOICEHAT -------------------------------
 
 #use true pchoice
@@ -542,21 +554,20 @@ pchoice_kernel.0050 = getPchoiceKernel(.005)
 pchoice_kernel.0025 = getPchoiceKernel(.0025)
 pchoice_kernel.0010 = getPchoiceKernel(.001)
 
-
 #SIMULATIONS --------------------------------
 stateCount   = aggregate(id~state,busData,FUN = length)
 stateCount$n = stateCount$id
 
 getHMSSthetahat = function(T,R,phat,pchoicehat,CoxCorrection = FALSE){
   #same outcome as weighting function
-  outHMSS = simpleHMSS(S,T,R,beta,phat,pchoicehat)
+  outHMSS = valHMSS(S,T,R,beta,phat,pchoicehat)
   if(CoxCorrection){
     y = log((pchoicehat[busData$state] + 1/stateCount$n[busData$state])/
-              (1 - pchoicehat[busData$state] + 1/stateCount$n[busData$state]))
+              (1 - pchoicehat[busData$state] + 1/stateCount$n[busData$state])) - outHMSS[busData$state,1]
   } else {
-    y = log(pchoicehat[busData$state]/(1-pchoicehat[busData$state]))  
+    y = log(pchoicehat[busData$state]/(1-pchoicehat[busData$state])) - outHMSS[busData$state,1]  
   }
-  X = outHMSS[busData$state,]
+  X = outHMSS[busData$state,-1]
   solve(crossprod(X))%*%crossprod(X,y)
 }
 
@@ -564,7 +575,7 @@ getHMSSthetahat = function(T,R,phat,pchoicehat,CoxCorrection = FALSE){
 sims     = 5
 simArray = array(dim=c(sims,2,9)) #2 variables x 9 variations
 T = 50
-R = 50
+R = 100
 for(sim in 1:sims){
   
   #MLE
@@ -596,4 +607,3 @@ t(apply(simArray,c(2,3),FUN=sd))
 
 #from CCP
 fit_CCP$par
-
