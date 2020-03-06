@@ -541,6 +541,10 @@ pchoicehat_rf[pchoicehat_rf == 1] = 1 - 1e-5
 #use true pchoice
 pchoicehat_true = pchoice
 
+#use polynomial estimate
+pchoicehat_poly = glm(choice~poly(state,5),busData,family="binomial")
+pchoicehat_poly = predict(pchoicehat_poly,newdata = data.frame(state = 1:S),type="response")
+
 #use kernel estimator
 kernelFunction = function(state,i,xi) dnorm((state - i)/xi)
 
