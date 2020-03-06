@@ -448,7 +448,7 @@ summary(beta*transMat0%*%value_CCP)
 head(cbind(beta*transMat0%*%value_CCP,beta*transMat1%*%value_CCP))
 
 #First, construct the conditional value function utility + beta*V as if theta was known
-valueFS       = futureValFS(S,T=50,R=100,beta,p,pchoice,theta)
+valueFS       = futureValFS(S,T=75,R=200,beta,p,pchoice,theta)
 valueFS_util1 = -lin_cost(1:S,theta,1) + valueFS[,2]    #Current utility plus discounted future utilities given t0 action = replace
 valueFS_util0 = -lin_cost(1:S,theta,0) + valueFS[,1]    #Current utility plus discounted future utilities given t0 action = maintain
 probhat_theta = exp(valueFS_util1)/(exp(valueFS_util0) + exp(valueFS_util1))
@@ -458,12 +458,12 @@ range(beta*transMat1%*%value_CCP - beta*transMat0%*%value_CCP)
 range(valueFS[,2] - valueFS[,1])
 
 #Next, forward simulate the future discounted utilities separating out theta and differening
-valueFS_HMSSFuture      = futureValHMSS(S,T=50,R=100,beta,p,pchoice)
+valueFS_HMSSFuture      = futureValHMSS(S,T=75,R=200,beta,p,pchoice)
 valueFS_HMSSFuture_diff = (-lin_cost(1:S,theta,1) - -lin_cost(1:S,theta,0) + valueFS_HMSSFuture %*% c(1,theta)) 
 probhat_HMSSFuture      = exp(valueFS_HMSSFuture_diff)/(1 + exp(valueFS_HMSSFuture_diff))
 
 #Next, finally reconstruct the function to include t = 0 utility
-valueFS_HMSS      = valHMSS(S,T=50,R=100,beta,p,pchoice)
+valueFS_HMSS      = valHMSS(S,T=75,R=200,beta,p,pchoice)
 valueFS_HMSS_diff = valueFS_HMSS %*% c(1,theta)
 probhat_HMSS      = exp(valueFS_HMSS_diff)/(1 + exp(valueFS_HMSS_diff))
 
@@ -473,6 +473,13 @@ matplot(cbind(
   probhat_theta,       #From forward simulation if theta is known
   probhat_HMSSFuture,  #From forward simulation separating out theta
   probhat_HMSS))       #Reconstruct function to include t = 0
+
+#Nice plot
+library(ggplot2)
+ggDat_probhat = data.frame(Method = rep(c("0 Nested FP","1 CCP","2 FS with Theta","3 FS Theta Separate","4 FS with t0"),each = S),
+                   probhat  = c(pchoice,probhat_CCP,probhat_theta,probhat_HMSSFuture,probhat_HMSS),
+                   state    = rep(1:S,5))
+ggplot(ggDat_probhat,aes(state,probhat,color=Method)) + theme_bw(15) + geom_line()
 
 #Use valueFS_HMSS to predict theta
 
@@ -537,7 +544,6 @@ pchoicehat_rf[pchoicehat_rf == 0] = 1e-5
 pchoicehat_rf[pchoicehat_rf == 1] = 1 - 1e-5
 
 #VARIATIONS TO ESTIMATE PCHOICEHAT -------------------------------
-
 #use true pchoice
 pchoicehat_true = pchoice
 
@@ -566,6 +572,13 @@ pchoice_kernel.0100 = getPchoiceKernel(.01)
 pchoice_kernel.0050 = getPchoiceKernel(.005)
 pchoice_kernel.0025 = getPchoiceKernel(.0025)
 pchoice_kernel.0010 = getPchoiceKernel(.001)
+
+#COMPARE PCHOICEHAT METHODS -----------------
+library(ggplot2)
+
+
+
+
 
 #SIMULATIONS --------------------------------
 stateCount   = aggregate(id~state,busData,FUN = length)
@@ -600,7 +613,7 @@ for(sim in 1:sims){
   simArray[sim,,2] = getHMSSthetahat(T,R,phat,pchoicehat_rf)
   
   #True pchoice
-  simArray[sim,,3] = getHMSSthetahat(T,R,phat,pchoice)
+  simArray[sim,,3] = getHMSSthetahat(T,R,phat,pchoicehat_true)
   
   #Cox Correction
   simArray[sim,,4] = getHMSSthetahat(T,R,phat,pchoicehat_rf,CoxCorrection = TRUE)
