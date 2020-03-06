@@ -248,8 +248,8 @@ p
 theta1 = 2.0   #replacement cost
 theta2 = 0.09  #maintenance cost
 # #OR
-theta1 = 8.0   #replacement cost
-theta2 = 0.09  #maintenance cost
+# theta1 = 8.0   #replacement cost
+# theta2 = 0.09  #maintenance cost
 
 #other parameters
 beta   = 0.9   #discount factor (.9 in paper)
@@ -453,18 +453,18 @@ valueFS_util1 = -lin_cost(1:S,thetahat,1) + valueFS[,2]    #Current utility plus
 valueFS_util0 = -lin_cost(1:S,thetahat,0) + valueFS[,1]    #Current utility plus discounted future utilities given t0 action = maintain
 probhat_theta = exp(valueFS_util1)/(exp(valueFS_util0) + exp(valueFS_util1))
 
-#Note similarity:
-summary(beta*transMat1%*%value_CCP - beta*transMat0%*%value_CCP)
-summary(valueFS[,2] - valueFS[,1])
+#Note similarity in range
+range(beta*transMat1%*%value_CCP - beta*transMat0%*%value_CCP)
+range(valueFS[,2] - valueFS[,1])
 
 #Next, forward simulate the future discounted utilities separating out theta and differening
 valueFS_HMSSFuture      = futureValHMSS(S,T=50,R=100,beta,p,pchoice)
-valueFS_HMSSFuture_diff = (-lin_cost(1:S,theta,1) - -lin_cost(1:S,theta,0) + valueFS_HMSSFuture %*% c(1,theta)) 
+valueFS_HMSSFuture_diff = (-lin_cost(1:S,thetahat,1) - -lin_cost(1:S,thetahat,0) + valueFS_HMSSFuture %*% c(1,theta)) 
 probhat_HMSSFuture      = exp(valueFS_HMSSFuture_diff)/(1 + exp(valueFS_HMSSFuture_diff))
 
 #Next, finally reconstruct the function to include t = 0 utility
 valueFS_HMSS      = valHMSS(S,T=50,R=100,beta,p,pchoice)
-valueFS_HMSS_diff = valueFS_HMSS %*% c(1,theta)
+valueFS_HMSS_diff = valueFS_HMSS %*% c(1,thetahat)
 probhat_HMSS      = exp(valueFS_HMSS_diff)/(1 + exp(valueFS_HMSS_diff))
 
 matplot(cbind(

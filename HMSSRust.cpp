@@ -177,11 +177,11 @@ mat futureValHMSS(int S, int T, int R, double beta, vec phat, vec pchoicehat) {
       
       //sum the discounted utilities
       //t0 = maintain
-      //a0 = sum(betaVec % (-thetahat[0]*choiceMat.col(0) + -thetahat[1]*stateMat.col(0)%(1-choiceMat.col(0)) + gamma_cnst - log(errorMat.col(0))));
+      //a0 = sum(betaVec % (-thetahat[0]*choiceMat.col(0) + -thetahat[1]*stateMat.col(0)%(1-choiceMat.col(0)) + errorMat.col(0)));
       
       //t0 = replace
-      //a1 = sum(betaVec % (-thetahat[0]*choiceMat.col(1) + -thetahat[1]*stateMat.col(1)%(1-choiceMat.col(1)) + gamma_cnst - log(errorMat.col(1))));
-
+      //a1 = sum(betaVec % (-thetahat[0]*choiceMat.col(1) + -thetahat[1]*stateMat.col(1)%(1-choiceMat.col(1)) + errorMat.col(1)));
+      
       //Need a1 - a0
       x0 = sum(betaVec % (errorMat.col(1) - errorMat.col(0)));
       
