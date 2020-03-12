@@ -606,22 +606,23 @@ R       = 50    #NUMBER OF DRAWS IN THE FORWARD SIMULATION
 #busData|number of choice occassions
 busData_temp = busData[1:nobs,]
 y = busData_temp$choice
-X = valHMSS_ME_mat(busData_temp$state,T=75,R=R,beta,p,pchoice) #version _mat averages already
+X = valHMSS_ME(busData_temp$state,T=75,R=R,beta,p,pchoice)
+X_bar = apply(X,c(1,2),FUN=mean)
 
 #Now estimate with three methods (assuming state space is too complex): 
 #1) HMSS forward simulation (method of moments)
-y_hmss = log(pchoice[busData_temp$state]/(1-pchoice[busData_temp$state])) - X[,1]
-X_hmss = X[,-1]
+y_hmss = log(pchoice[busData_temp$state]/(1-pchoice[busData_temp$state])) - X_bar[,1]
+X_hmss = X_bar[,-1]
 out_hmss = solve(crossprod(X_hmss))%*%crossprod(X_hmss,y_hmss)
 out_hmss
 
 #2) Forward simulation with logisitic regression
-X_log = X[,-1]
+X_log = X_bar[,-1]
 out_log = summary(glm(y~X_log-1,family = "binomial"))
 out_log$coef
 
 #3) Forward simulation with logit accounting for missing data
-X_me   = valHMSS_ME(busData_temp$state,T=75,R=R,beta,p,pchoice)[,-1,]
+X_me   = X[,-1,]
 out_me = compute_logistic_regr_under_measurement_error(y, # vector of length n
                                               matrix(runif(length(y),-1,1),ncol=1), #matrix of size n x p_without_measurement_error, should include a column of ones if model has an intercept, cannot be a vector even if p_without_measurement_error=1
                                               X_me, #3D array of size n x p_with_measurement_error x n_replicates, cannot be a matrix even if p_with_measurement_error=1
