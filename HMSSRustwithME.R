@@ -582,13 +582,13 @@ beta    = 0.9   #discount factor (.9 in paper)
 S       = 90    #discretized states (90 in paper)
 nbus    = 1     #in this simulation, 1 bus with varying number of choice occasions
 nperiod = 5000  #maximum number of choice occasions
-busData = bus_dgp(nbus,nperiod,pchoice,p)
 theta   = c(theta1,theta2)
 T       = 75
 #Regardless of method, we need an estimate of p and pchoice, which will be fixed across comparisons and is a function of beta  and theta
 p
 out_cm     = contraction_mapping(S=S,p=p,MF=lin_cost,params=theta,beta=beta)
 pchoice    = out_cm$CP_forward[,2]
+busData    = bus_dgp(nbus,nperiod,pchoice,p)
 
 #First, obtain "true" value function estimates (set R to large number)
 val_True   = valHMSS_ME_mat(1:S,T=75,R=1000,beta,p,pchoice) #version _mat averages already
